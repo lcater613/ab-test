@@ -1,0 +1,352 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr  8 21:50:09 2019
+
+@author: kassi owens
+"""
+
+Part I - Probability
+To get started, let's import our libraries.
+
+import pandas as pd
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+%matplotlib inline
+random.seed(42)
+1. Now, read in the ab_data.csv data. Store it in df. Use your dataframe to answer the questions in Quiz 1 of the classroom.
+
+a. Read in the dataset and take a look at the top few rows here:
+
+df = pd.read_csv('ab_data.csv')
+df.head()
+user_id	timestamp	group	landing_page	converted
+0	851104	2017-01-21 22:11:48.556739	control	old_page	0
+1	804228	2017-01-12 08:01:45.159739	control	old_page	0
+2	661590	2017-01-11 16:55:06.154213	treatment	new_page	0
+3	853541	2017-01-08 18:28:03.143765	treatment	new_page	0
+4	864975	2017-01-21 01:52:26.210827	control	old_page	1
+b. Use the cell below to find the number of rows in the dataset.
+
+df.shape
+(294478, 5)
+c. The number of unique users in the dataset.
+
+df.user_id.nunique()
+290584
+d. The proportion of users converted.
+
+converted = df.converted.mean()
+converted
+0.11965919355605512
+e. The number of times the new_page and treatment don't match.
+
+new_page_no_match = df.query('landing_page == "new_page"')
+new_page_no_match = new_page_df.query('group == "control"')
+new_page_no_match.count()
+user_id         1928
+timestamp       1928
+group           1928
+landing_page    1928
+converted       1928
+dtype: int64
+old_page_no_match = df.query('landing_page == "old_page"')
+old_page_no_match = old_page.query('group == "treatment"')
+old_page_no_match.count()
+user_id         1965
+timestamp       1965
+group           1965
+landing_page    1965
+converted       1965
+dtype: int64
+total_no_match = new_page_no_match.count() + old_page_no_match.count()
+total_no_match
+user_id         3893
+timestamp       3893
+group           3893
+landing_page    3893
+converted       3893
+dtype: int64
+f. Do any of the rows have missing values?
+
+df.isnull().sum()
+user_id         0
+timestamp       0
+group           0
+landing_page    0
+converted       0
+dtype: int64
+2. For the rows where treatment does not match with new_page or control does not match with old_page, we cannot be sure if this row truly received the new or old page. Use Quiz 2 in the classroom to figure out how we should handle these rows.
+
+a. Now use the answer to the quiz to create a new dataset that meets the specifications from the quiz. Store your new dataframe in df2.
+
+df2 = df.query('group == "control" and landing_page =="old_page" or group == "treatment" and landing_page =="new_page"')
+# Double Check all of the correct rows were removed - this should be 0
+df2[((df2['group'] == 'treatment') == (df2['landing_page'] == 'new_page')) == False].shape[0]
+0
+3. Use df2 and the cells below to answer questions for Quiz3 in the classroom.
+
+a. How many unique user_ids are in df2?
+
+total_user_id = df2.user_id.count()
+unique_user_id = df2.user_id.nunique()
+total_user_id, unique_user_id
+(290585, 290584)
+b. There is one user_id repeated in df2. What is it?
+
+df2[df2.user_id.duplicated()]
+user_id	timestamp	group	landing_page	converted
+2893	773192	2017-01-14 02:55:59.590927	treatment	new_page	0
+c. What is the row information for the repeat user_id?
+
+# shown above, but repeated for reference. Group is treatment, landing_page is new_page, and converted is 0
+dup_row = df2[df2.user_id.duplicated()]
+dup_row
+​
+user_id	timestamp	group	landing_page	converted
+2893	773192	2017-01-14 02:55:59.590927	treatment	new_page	0
+d. Remove one of the rows with a duplicate user_id, but keep your dataframe as df2.
+
+df2.query('user_id == "773192"')
+user_id	timestamp	group	landing_page	converted
+1899	773192	2017-01-09 05:37:58.781806	treatment	new_page	0
+2893	773192	2017-01-14 02:55:59.590927	treatment	new_page	0
+df2 = df2.drop_duplicates(subset=['user_id'], keep='first')
+#verifying that the duplicate row has been deleted.
+dup_row = df2[df2.user_id.duplicated()]
+dup_row
+user_id	timestamp	group	landing_page	converted
+4. Use df2 in the cells below to answer the quiz questions related to Quiz 4 in the classroom.
+
+a. What is the probability of an individual converting regardless of the page they receive?
+
+df2.converted.mean()
+0.11959708724499628
+b. Given that an individual was in the control group, what is the probability they converted?
+
+control_df = df2.query('group == "control"')
+control_group.converted.mean()
+0.1203863045004612
+c. Given that an individual was in the treatment group, what is the probability they converted?
+
+treatment_df = df2.query('group == "treatment"')
+treatment_df.converted.mean()
+​
+0.11880806551510564
+#calculating the actual observed difference to be used later.
+obs_diff= treatment_df.converted.mean() - control_group.converted.mean()
+d. What is the probability that an individual received the new page?
+
+new_page = df2.query('landing_page == "new_page"').landing_page.count()
+new_page
+​
+​
+145310
+total_pages = df2.landing_page.count()
+total_pages
+290584
+new_page_probability = df2.query('landing_page == "new_page"').landing_page.count() / df2.landing_page.count()
+new_page_probability
+0.50006194422266881
+e. Consider your results from parts (a) through (d) above, and explain below whether you think there is sufficient evidence to conclude that the new treatment page leads to more conversions.
+
+After reviewing the proportion of control individuals and treatment individuals who converted, the results are fairly similar. Based on how close the results were, at this time there isn't sufficient evidence to conclude the new treatment page leads to more conversions.
+
+
+Part II - A/B Test
+Notice that because of the time stamp associated with each event, you could technically run a hypothesis test continuously as each observation was observed.
+
+However, then the hard question is do you stop as soon as one page is considered significantly better than another or does it need to happen consistently for a certain amount of time? How long do you run to render a decision that neither page is better than another?
+
+These questions are the difficult parts associated with A/B tests in general.
+
+1. For now, consider you need to make the decision just based on all the data provided. If you want to assume that the old page is better unless the new page proves to be definitely better at a Type I error rate of 5%, what should your null and alternative hypotheses be? You can state your hypothesis in terms of words or in terms of  𝑝𝑜𝑙𝑑  and  𝑝𝑛𝑒𝑤 , which are the converted rates for the old and new pages.
+
+Null:  𝑝𝑜𝑙𝑑  >=  𝑝𝑛𝑒𝑤
+
+Alternative:  𝑝𝑜𝑙𝑑  <  𝑝𝑛𝑒𝑤
+
+2. Assume under the null hypothesis,  𝑝𝑛𝑒𝑤  and  𝑝𝑜𝑙𝑑  both have "true" success rates equal to the converted success rate regardless of page - that is  𝑝𝑛𝑒𝑤 and  𝑝𝑜𝑙𝑑  are equal. Furthermore, assume they are equal to the converted rate in ab_data.csv regardless of the page.
+
+
+Use a sample size for each page equal to the ones in ab_data.csv.
+
+
+Perform the sampling distribution for the difference in converted between the two pages over 10,000 iterations of calculating an estimate from the null.
+
+
+Use the cells below to provide the necessary parts of this simulation. If this doesn't make complete sense right now, don't worry - you are going to work through the problems below to complete this problem. You can use Quiz 5 in the classroom to make sure you are on the right track.
+
+
+a. What is the conversion rate for  𝑝𝑛𝑒𝑤  under the null?
+
+p_new = (df2.converted == 1).mean()
+p_new
+0.11959708724499628
+b. What is the conversion rate for  𝑝𝑜𝑙𝑑  under the null?
+
+
+p_old = (df2.converted == 1).mean()
+p_old
+0.11959708724499628
+c. What is  𝑛𝑛𝑒𝑤 , the number of individuals in the treatment group?
+
+n_new = df2.query('landing_page == "new_page"').landing_page.count()
+n_new
+145310
+d. What is  𝑛𝑜𝑙𝑑 , the number of individuals in the control group?
+
+n_old = df2.query('landing_page == "old_page"').landing_page.count()
+n_old
+145274
+e. Simulate  𝑛𝑛𝑒𝑤  transactions with a conversion rate of  𝑝𝑛𝑒𝑤  under the null. Store these  𝑛𝑛𝑒𝑤  1's and 0's in new_page_converted.
+
+new_page_converted = np.random.choice([0, 1], size=n_new, p= [1-p_new, p_new]).mean()
+new_page_converted
+0.11977152295093249
+f. Simulate  𝑛𝑜𝑙𝑑  transactions with a conversion rate of  𝑝𝑜𝑙𝑑  under the null. Store these  𝑛𝑜𝑙𝑑  1's and 0's in old_page_converted.
+
+old_page_converted = np.random.choice([0, 1], size=n_old, p= [1-p_old, p_old]).mean()
+old_page_converted
+0.11812850200311137
+g. Find  𝑝𝑛𝑒𝑤  -  𝑝𝑜𝑙𝑑  for your simulated values from part (e) and (f).
+
+difference = new_page_converted - old_page_converted
+difference
+0.0016430209478211222
+h. Create 10,000  𝑝𝑛𝑒𝑤  -  𝑝𝑜𝑙𝑑  values using the same simulation process you used in parts (a) through (g) above. Store all 10,000 values in a NumPy array called p_diffs.
+
+p_diffs = []
+for _ in range(10000):
+    new_page_converted = np.random.binomial(n_new,p_new)
+    old_page_converted = np.random.binomial(n_old, p_old)
+    diff = new_page_converted/n_new - old_page_converted/n_old
+    p_diffs.append(diff)
+i. Plot a histogram of the p_diffs. Does this plot look like what you expected? Use the matching problem in the classroom to assure you fully understand what was computed here.
+
+#This plot does look as expected. Based on the calculations made, we expect to see a normal distribution over the mean.
+plt.hist(p_diffs);
+
+j. What proportion of the p_diffs are greater than the actual difference observed in ab_data.csv?
+
+#pulling obs_diff from the observed difference in conversion rates from the original data.
+(p_diffs > obs_diff).mean()
+0.90510000000000002
+k. Please explain using the vocabulary you've learned in this course what you just computed in part j. What is this value called in scientific studies? What does this value mean in terms of whether or not there is a difference between the new and old pages?
+
+This calculation represents the p-value. This tells us that based on the observed differences, that we believe there is evidence that could lead us to reject the null hypothesis
+
+l. We could also use a built-in to achieve similar results. Though using the built-in might be easier to code, the above portions are a walkthrough of the ideas that are critical to correctly thinking about statistical significance. Fill in the below to calculate the number of conversions for each page, as well as the number of individuals who received each page. Let n_old and n_new refer the the number of rows associated with the old page and new pages, respectively.
+
+import statsmodels.api as sm
+​
+convert_old = sum((df2.group == 'control') & (df2.converted == 1))
+convert_new = sum((df2.group == 'treatment') & (df2.converted == 1))
+n_old = sum(df2.group == 'control')
+n_new = sum(df2.group == 'treatment')
+m. Now use stats.proportions_ztest to compute your test statistic and p-value. Here is a helpful link on using the built in.
+
+z_score, p_value = sm.stats.proportions_ztest([convert_new, convert_old], [n_new, n_old], alternative='larger')
+z_score, p_value
+(-1.3109241984234394, 0.90505831275902449)
+n. What do the z-score and p-value you computed in the previous question mean for the conversion rates of the old and new pages? Do they agree with the findings in parts j. and k.?
+
+The z-score tells us how many standard deviations from the mean a data point is. This information does agree with the findings in the earlier sections, as the p-value remained the same.
+
+
+Part III - A regression approach
+1. In this final part, you will see that the result you achieved in the A/B test in Part II above can also be achieved by performing regression.
+
+a. Since each row is either a conversion or no conversion, what type of regression should you be performing in this case?
+
+logistic regression.
+
+b. The goal is to use statsmodels to fit the regression model you specified in part a. to see if there is a significant difference in conversion based on which page a customer receives. However, you first need to create in df2 a column for the intercept, and create a dummy variable column for which page each user received. Add an intercept column, as well as an ab_page column, which is 1 when an individual receives the treatment and 0 if control.
+
+df2['intercept']= 1
+df2['ab_page'] = (df2.group == 'treatment').astype(int)
+c. Use statsmodels to instantiate your regression model on the two columns you created in part b., then fit the model using the two columns you created in part b. to predict whether or not an individual converts.
+
+model = sm.Logit(df2.converted, df2[['intercept', 'ab_page']])
+results = model.fit()
+​
+Optimization terminated successfully.
+         Current function value: 0.366118
+         Iterations 6
+d. Provide the summary of your model below, and use it as necessary to answer the following questions.
+
+results.summary()
+Logit Regression Results
+Dep. Variable:	converted	No. Observations:	290584
+Model:	Logit	Df Residuals:	290582
+Method:	MLE	Df Model:	1
+Date:	Mon, 08 Apr 2019	Pseudo R-squ.:	8.077e-06
+Time:	06:08:24	Log-Likelihood:	-1.0639e+05
+converged:	True	LL-Null:	-1.0639e+05
+LLR p-value:	0.1899
+coef	std err	z	P>|z|	[0.025	0.975]
+intercept	-1.9888	0.008	-246.669	0.000	-2.005	-1.973
+ab_page	-0.0150	0.011	-1.311	0.190	-0.037	0.007
+e. What is the p-value associated with ab_page? Why does it differ from the value you found in Part II?
+
+The P value associates with ab_page is .19. This is different from the p-value in part 2 because in part 2, we were looking at a one-tailed test, whereas in this area, we're looking at a two-tailed test.
+
+f. Now, you are considering other things that might influence whether or not an individual converts. Discuss why it is a good idea to consider other factors to add into your regression model. Are there any disadvantages to adding additional terms into your regression model?
+
+By adding other factors into the mix, we can further ensure that our relationships are actually significant, and not based on unnaccounted for factors. One issue with doing so is that our added variables could be related with one another. We want predictor variables to be related with the response, not other variables.
+
+g. Now along with testing if the conversion rate changes for different pages, also add an effect based on which country a user lives in. You will need to read in the countries.csv dataset and merge together your datasets on the appropriate rows. Here are the docs for joining tables.
+
+Does it appear that country had an impact on conversion? Don't forget to create dummy variables for these country columns - Provide the statistical output as well as a written response to answer this question.
+
+countries = pd.read_csv('countries.csv')
+df_new = df2.set_index('user_id').join(countries.set_index('user_id'))
+df_new[['ca', 'uk', 'us']]=pd.get_dummies(df_new['country'])
+model = sm.Logit(df_new.converted, df_new[['intercept', 'ab_page', 'ca', 'uk']])
+results = model.fit()
+results.summary()
+Optimization terminated successfully.
+         Current function value: 0.366113
+         Iterations 6
+Logit Regression Results
+Dep. Variable:	converted	No. Observations:	290584
+Model:	Logit	Df Residuals:	290580
+Method:	MLE	Df Model:	3
+Date:	Mon, 08 Apr 2019	Pseudo R-squ.:	2.323e-05
+Time:	05:18:20	Log-Likelihood:	-1.0639e+05
+converged:	True	LL-Null:	-1.0639e+05
+LLR p-value:	0.1760
+coef	std err	z	P>|z|	[0.025	0.975]
+intercept	-1.9893	0.009	-223.763	0.000	-2.007	-1.972
+ab_page	-0.0149	0.011	-1.307	0.191	-0.037	0.007
+ca	-0.0408	0.027	-1.516	0.130	-0.093	0.012
+uk	0.0099	0.013	0.743	0.457	-0.016	0.036
+#based on the coefficients from the data provided, it appears the country did have an effect on conversion. Users from the UK had higher conversion rates on average than those form the U.S. and Canada.
+h. Though you have now looked at the individual factors of country and page on conversion, we would now like to look at an interaction between page and country to see if there significant effects on conversion. Create the necessary additional columns, and fit the new model.
+
+Provide the summary results, and your conclusions based on the results.
+
+df_new['ca_ab_page'] = df_new['ca']*df_new['ab_page']
+df_new['uk_ab_page'] = df_new['uk']*df_new['ab_page']
+model = sm.Logit(df_new.converted, df_new[['intercept', 'ab_page', 'ca', 'uk', 'ca_ab_page', 'uk_ab_page']])
+results = model.fit()
+results.summary()
+Optimization terminated successfully.
+         Current function value: 0.366109
+         Iterations 6
+Logit Regression Results
+Dep. Variable:	converted	No. Observations:	290584
+Model:	Logit	Df Residuals:	290578
+Method:	MLE	Df Model:	5
+Date:	Mon, 08 Apr 2019	Pseudo R-squ.:	3.482e-05
+Time:	06:23:11	Log-Likelihood:	-1.0639e+05
+converged:	True	LL-Null:	-1.0639e+05
+LLR p-value:	0.1920
+coef	std err	z	P>|z|	[0.025	0.975]
+intercept	-1.9865	0.010	-206.344	0.000	-2.005	-1.968
+ab_page	-0.0206	0.014	-1.505	0.132	-0.047	0.006
+ca	-0.0175	0.038	-0.465	0.642	-0.091	0.056
+uk	-0.0057	0.019	-0.306	0.760	-0.043	0.031
+ca_ab_page	-0.0469	0.054	-0.872	0.383	-0.152	0.059
+uk_ab_page	0.0314	0.027	1.181	0.238	-0.021	0.084
+#With the exception of Canada, we see that holding all other variables constant, it appears that users form the U.K. and U.S. on average saw higher conversion rates with the new landing page.
